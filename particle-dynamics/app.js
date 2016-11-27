@@ -62,13 +62,16 @@ State.prototype.ode = function (t0, h){
 }
 
 function simulate(x0, t0, t1, h, accuracy, onStep){
-    while(t0 <= t1){
+    onStep(x0, t0);
+    while(t0 < t1){
         var xa = x0.ode(t0, h);
         var xb = x0.ode(t0, h/2).ode(t0 + h/2, h/2);
 
         var error = xa.minus(xb).magnitude() || accuracy;
         var scale = Math.pow(accuracy / error, 1 / 5);
-        h = h * scale || accuracy; 
+        h = h * scale || accuracy;
+
+        if(t0 + h > t1) h = t1 - t0; 
 
         x0 = x0.ode(t0, h);
         t0 += h;

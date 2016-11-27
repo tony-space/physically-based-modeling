@@ -46,19 +46,19 @@ State.prototype.derivative = function(t){
 }
 
 State.prototype.ode = function (t0, h){
-    // runge-kutta (bugs!)
-    // var k1 = this.derivative(t0);
-    // var k2 = this.plus(k1.scaled(h/2)).derivative(t0 + h/2);
-    // var k3 = this.plus(k2.scaled(h/2)).derivative(t0 + h/2);
-    // var k4 = this.plus(k3).derivative(t0 + h);
+    // runge-kutta
+    var k1 = this.derivative(t0);
+    var k2 = k1.scaled(h/2).add(this).derivative(t0 + h/2);
+    var k3 = k2.scaled(h/2).add(this).derivative(t0 + h/2);
+    var k4 = k3.scaled(h).add(this).derivative(t0 + h);
 
-    // return k2.add(k3).scale(2).add(k1).add(k4).scale(h/6).add(this);
+    return k2.add(k3).scale(2).add(k1).add(k4).scale(h/6).add(this);
 
     // euler
     // return this.derivative(t0).scale(h).add(this);
 
     // midpoint
-    return this.derivative().scale(h/2).add(this).derivative().scale(h).add(this);
+    //return this.derivative(t0).scale(h/2).add(this).derivative(t0 + h/2).scale(h).add(this);
 }
 
 function simulate(x0, t0, t1, h, accuracy, onStep){

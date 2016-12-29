@@ -1,87 +1,13 @@
 'use strict';
 
-function Vector(items) {
-    if (!items || items.constructor !== Array)
-        this._data = [];
-    else
-        this._data = items.slice(0);
-}
-
-Vector.prototype.add = function (v) {
-    if (v._data.length != this._data.length)
-        throw new RangeError();
-
-    return new Vector(this._data.map((e, i) => e + v._data[i]));
-};
-
-Vector.prototype.sub = function (v) {
-    if (v._data.length != this._data.length)
-        throw new RangeError();
-
-    return new Vector(this._data.map((e, i) => e - v._data[i]));
-};
-
-Vector.prototype.scale = function (f) {
-    return new Vector(this._data.map(e => e * f));
-};
-
-Vector.prototype.dot = function (v) {
-    if (v._data.length != this._data.length)
-        throw new RangeError();
-
-    return this._data.reduce((sum, e, i) => sum + e * v._data[i], 0);
-};
-
-Vector.prototype.magnitude = function () {
-    return Math.sqrt(this.dot(this));
-};
-
-Vector.prototype.clone = function () {
-    return new Vector(this._data);
-};
-
-Vector.prototype.size = function () {
-    return this._data.length;
-};
-
-Vector.prototype.get = function (i) {
-    if (i < 0 || i >= this._data.length)
-        throw new RangeError("invalid index");
-    return this._data[i];
-};
-
-Vector.prototype.set = function (i, v) {
-    if (i < 0 || i >= this._data.length)
-        throw new RangeError("invalid index");
-    return this._data[i] = v;
-};
-
-Vector.prototype.data = function () {
-    return this._data;
-};
-
 function Matrix(rows, cols) {
     this._rows = rows;
     this._cols = cols;
 
     this._data = new Array(rows * cols);
-    for(var i = 0; i < this._data.length; ++i)
+    for (let i = 0; i < this._data.length; ++i)
         this._data[i] = 0;
 }
-
-Matrix.prototype.set = function (row, col, v) {
-    if (row < 0 || col < 0 || row >= this._rows || col >= this._cols)
-        throw new RangeError("invalid index");
-
-    this._data[col + row * this._cols] = v;
-};
-
-Matrix.prototype.get = function (row, col) {
-    if (row < 0 || col < 0 || row >= this._rows || col >= this._cols)
-        throw new RangeError("invalid index");
-
-    return this._data[col + row * this._cols];
-};
 
 Matrix.prototype.rows = function () {
     return this._rows;
@@ -91,30 +17,67 @@ Matrix.prototype.columns = function () {
     return this._cols;
 };
 
+Matrix.prototype.clone = function () {
+    let result = new Matrix(this.rows(), this.columns());
+    for (let i = 0; i < this.rows(); ++i)
+        for (let j = 0; j < this.columns(); ++j)
+            result.set(i, j, this.get(i, j));
+    return result;
+};
+
+Matrix.prototype.set = function (row, col, v) {
+    if (row < 0 || col < 0 || row >= this.rows() || col >= this.columns())
+        throw new RangeError("invalid index");
+
+    this._data[col + row * this.columns()] = v;
+};
+
+Matrix.prototype.get = function (row, col) {
+    if (row < 0 || col < 0 || row >= this.rows() || col >= this.columns())
+        throw new RangeError("invalid index");
+
+    return this._data[col + row * this.columns()];
+};
+
+Matrix.prototype.add = function (m) {
+    if (m.rows() != this.rows() || m.columns() != this.columns())
+        throw new TypeError("invalid argument");
+
+    let result = new Matrix(this.rows(), this.columns());
+    for (let i = 0; i < this.rows(); ++i)
+        for (let j = 0; j < this.columns(); ++j)
+            result.set(i, j, this.get(i, j) + m.get(i, j));
+    return result
+};
+
+Matrix.prototype.sub = function (m) {
+    if (m.rows() != this.rows() || m.columns() != this.columns())
+        throw new TypeError("invalid argument");
+
+    let result = new Matrix(this.rows(), this.columns());
+    for (let i = 0; i < this.rows(); ++i)
+        for (let j = 0; j < this.columns(); ++j)
+            result.set(i, j, this.get(i, j) - m.get(i, j));
+    return result
+};
+
 Matrix.prototype.mult = function (tensor) {
     if (tensor.constructor === Number) {
-        let result = new Matrix(this._rows, this._cols);
-        this._data.forEach((e, i) => result._data[i] = e * tensor);
-        return result;
-    }
-    else if (tensor.constructor === Vector) {
-        if (tensor.size() != this.columns())
-            throw new RangeError("invalid size");
-        let result = new Vector();
-        result._data = new Array(this._rows);
-        for (let row = 0; row < this._rows; ++row)
-            result._data[row] = tensor._data.reduce((sum, e, col) => sum + e * this.get(row, col), 0);
+        let result = new Matrix(this.rows(), this.columns());
+        for (let i = 0; i < this.rows(); ++i)
+            for (let j = 0; j < this.columns(); ++j)
+                result.set(i, j, this.get(i, j) * tensor);
         return result;
     }
     else if (tensor.constructor === Matrix) {
         if (this.columns() != tensor.rows())
             throw new RangeError("invalid size");
 
-        let result = new Matrix(this._rows, tensor._cols);
-        for (let i = 0; i < this._rows; ++i)
-            for (let j = 0; j < tensor._cols; ++j) {
+        let result = new Matrix(this.rows(), tensor.columns());
+        for (let i = 0; i < this.rows(); ++i)
+            for (let j = 0; j < tensor.columns(); ++j) {
                 let sum = 0;
-                for(let k = 0; k < this._cols; ++k)
+                for (let k = 0; k < this.columns(); ++k)
                     sum += this.get(i, k) * tensor.get(k, j);
                 result.set(i, j, sum);
             }
@@ -126,14 +89,20 @@ Matrix.prototype.mult = function (tensor) {
 };
 
 Matrix.prototype.transpose = function () {
-    var result = new Matrix(this._cols, this._rows);
+    let result = new Matrix(this.columns(), this.rows());
 
-    for (let i = 0; i < this._rows; ++i)
-        for (let j = 0; j < this._cols; ++j)
+    for (let i = 0; i < this.rows(); ++i)
+        for (let j = 0; j < this.columns(); ++j)
             result.set(j, i, this.get(i, j));
 
     return result;
-}
+};
+
+Matrix.createVector = function (data) {
+    let result = new Matrix(data.length, 1);
+    data.forEach((e, i) => result.set(i, 0, e));
+    return result;
+};
 
 function derivative(func, arg, epsilon) {
     if (epsilon === undefined)
@@ -142,34 +111,38 @@ function derivative(func, arg, epsilon) {
     if (arg.constructor === Number) {
         let left = func(arg - epsilon);
         let right = func(arg + epsilon);
-        if (left.constructor === Number && right.constructor === Number)
+        if (left.constructor === Number)
             return (right - left) / (2 * epsilon)
-        else if (left.constructor === Vector && right.constructor === Vector)
-            return right.sub(left).scale(0.5 / epsilon);
+        else if (left.constructor === Mathrix && left.columns() === 1)
+            return right.sub(left).mult(0.5 / epsilon);
         else
             throw new TypeError("not implemented yet");
     }
-    else if (arg.constructor === Vector) {
-        let left = func(arg);
-        let result = new Matrix(left.constructor === Number ? 1 : left.size(), arg.size());
-        let data = arg.data();
+    else if (arg.constructor === Matrix && arg.columns() === 1) {
+        let result;
+        for (let i = 0; i < arg.rows(); ++i) {
+            let left = arg.clone();
+            let right = arg.clone();
 
-        data.forEach((argE, col) => {
-            let orig = data[col];
-            data[col] += epsilon;
-            let right = func(arg);
-            data[col] = orig;
-            if (left.constructor !== right.constructor)
-                throw new TypeError("invalid state");
-            if (right.constructor === Number)
-                result.set(0, col, (right - left) / epsilon);
-            else if (right.constructor === Vector) {
-                right.sub(left).scale(1 / epsilon).data().forEach((e, row) => result.set(row, col, e));
+            left.set(i, 0, left.get(i, 0) - epsilon);
+            right.set(i, 0, right.get(i, 0) + epsilon);
+
+            left = func(left);
+            right = func(right);
+
+            if (left.constructor === Number) {
+                if (!result) result = new Matrix(1, arg.rows());
+                result.set(0, i, (right - left) / (2 * epsilon));
+            }
+            else if (left.constructor === Matrix && left.columns() === 1) {
+                if (!result) result = new Matrix(left.rows(), arg.rows());
+                let deriv = right.sub(left).mult(0.5 / epsilon);
+                for (let j = 0; j < deriv.rows(); ++j)
+                    result.set(j, i, deriv.get(j, 0));
             }
             else
                 throw new TypeError("not implemented yet");
-        });
-
+        }
         return result;
     }
     else
@@ -186,23 +159,23 @@ w.set(2, 2, 1 / m2);
 w.set(3, 3, 1 / m2);
 
 const r = 5;
-let q = new Vector([-2.5, 0, 2.5, 0]);
-let v = new Vector([0, 5, 0, -5]);
+let q = Matrix.createVector([-2.5, 0, 2.5, 0]);
+let v = Matrix.createVector([0, 5, 0, -5]);
 let j = J(q);
 let cv = Cv(v, q);
 let jv = Jv(v, q)
 
-var jwjt = j.mult(w).mult(j.transpose());
-var jvv = jv.mult(v).scale(-1);
-var lambda = jvv.get(0, 0) / jwjt.get(0, 0);
+let jwjt = j.mult(w).mult(j.transpose());
+let jvv = jv.mult(v).mult(-1);
+let lambda = jvv.get(0, 0) / jwjt.get(0, 0);
 
 //gotcha!
-var a = w.mult(j.transpose().mult(lambda));
+let a = w.mult(j.transpose().mult(lambda));
 
 function C(q) {
-    let dx = q.get(0) - q.get(2);
-    let dy = q.get(1) - q.get(3);
-    return dx * dx + dy * dy - r;
+    let dx = q.get(0, 0) - q.get(2, 0);
+    let dy = q.get(1, 0) - q.get(3, 0);
+    return dx * dx + dy * dy - r * r;
 }
 
 function J(q) {

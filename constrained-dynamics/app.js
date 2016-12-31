@@ -73,13 +73,20 @@ Matrix.prototype.mult = function (tensor) {
         if (this.columns() != tensor.rows())
             throw new RangeError("invalid size");
 
-        let result = new Matrix(this.rows(), tensor.columns());
+        let result;
+        if (this.rows() !== 1 || tensor.columns() !== 1)
+            result = new Matrix(this.rows(), tensor.columns());
+
         for (let i = 0; i < this.rows(); ++i)
             for (let j = 0; j < tensor.columns(); ++j) {
                 let sum = 0;
                 for (let k = 0; k < this.columns(); ++k)
                     sum += this.get(i, k) * tensor.get(k, j);
-                result.set(i, j, sum);
+
+                if (result)
+                    result.set(i, j, sum);
+                else
+                    return sum;
             }
 
         return result;
@@ -186,43 +193,68 @@ function derivative(func, arg, epsilon) {
         throw new TypeError("not implemented yet");
 }
 
-const m1 = 2;
-const m2 = 3;
-const w = new Matrix(4, 4);
+// const m1 = 2;
+// const m2 = 3;
+// const w = new Matrix(4, 4);
 
-w.set(0, 0, 1 / m1);
-w.set(1, 1, 1 / m1);
-w.set(2, 2, 1 / m2);
-w.set(3, 3, 1 / m2);
+// w.set(0, 0, 1 / m1);
+// w.set(1, 1, 1 / m1);
+// w.set(2, 2, 1 / m2);
+// w.set(3, 3, 1 / m2);
 
-const r = 5;
-let q = Matrix.createVector([-2.5, 0, 2.5, 0]);
-let v = Matrix.createVector([0, 5, 0, -5]);
-let j = J(q);
-let cv = Cv(v, q);
-let jv = Jv(v, q)
+// const r = 5;
+// let q = Matrix.createVector([-2.5, 0, 2.5, 0]);
+// let v = Matrix.createVector([0, 5, 0, -5]);
+// let j = J(q);
+// let cv = j.mult(v);
+// let jv = derivative(q => J(q).mult(v), q);
 
-let jwjt = j.mult(w).mult(j.transpose());
-let jvv = jv.mult(v).mult(-1);
-let lambda = jvv.get(0, 0) / jwjt.get(0, 0);
+// let jwjt = j.mult(w).mult(j.transpose());
+// let jvv = jv.mult(v).mult(-1);
+// let lambda = jwjt.inverse().mult(jvv);
 
-//gotcha!
-let a = w.mult(j.transpose().mult(lambda));
+// //gotcha!
+// let a = w.mult(j.transpose().mult(lambda));
 
-function C(q) {
-    let dx = q.get(0, 0) - q.get(2, 0);
-    let dy = q.get(1, 0) - q.get(3, 0);
-    return dx * dx + dy * dy - r * r;
-}
+// function C(q) {
+//     let dx = q.get(0, 0) - q.get(2, 0);
+//     let dy = q.get(1, 0) - q.get(3, 0);
+//     return dx * dx + dy * dy - r * r;
+// }
 
 function J(q) {
     return derivative(C, q);
 }
 
-function Cv(v, q) {
-    return J(q).mult(v);
+
+function Sphere(q) {
+    return Math.sqrt(q.transpose().mult(q)) - 5;
 }
 
-function Jv(v, q) {
-    return derivative(Cv.bind(null, v), q);
+function Plane(q) {
+    let normal = Matrix.createVector([0, 1, 0]).transpose();
+    return normal.mult(q);
 }
+
+function C(q) {
+    return Matrix.createVector([Sphere(q), Plane(q)]);
+}
+
+let q = Matrix.createVector([0, 0, 5]);
+let v = Matrix.createVector([0, 0, 1]);
+let w = Matrix.createIdentity(3);
+
+let ks = 2;
+let kd = 3;
+
+let c = C(q);
+let j = J(q);
+let cv = j.mult(v);
+let jv = derivative(q => J(q).mult(v), q);
+
+let jwjt = j.mult(w).mult(j.transpose());
+let jvv = jv.mult(v).mult(-1);
+let lambda = jwjt.inverse().mult(jvv.sub(cv.mult(ks).add(cv.mult(kd))));
+
+//gotcha!
+let a = w.mult(j.transpose().mult(lambda));

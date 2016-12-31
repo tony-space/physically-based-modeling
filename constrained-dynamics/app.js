@@ -98,9 +98,46 @@ Matrix.prototype.transpose = function () {
     return result;
 };
 
+Matrix.prototype.inverse = function () {
+    if (this.rows() != this.columns() || this.rows() < 1)
+        throw new TypeError("invalid matrix sizes");
+
+    let result = Matrix.createIdentity(this.rows());
+    let self = this.clone();
+
+    for (let i = 0; i < self.rows(); ++i) {
+        let diagonal = self.get(i, i);
+        if (diagonal === 0)
+            throw new Error("determinants equals zero");
+
+        for (let j = 0; j < self.columns(); ++j) {
+            self.set(i, j, self.get(i, j) / diagonal);
+            result.set(i, j, result.get(i, j) / diagonal);
+        }
+
+        for (let k = 0; k < self.rows(); ++k) {
+            if (k === i) continue;
+            let coefficient = self.get(k, i);
+            for (let j = 0; j < self.columns(); ++j) {
+                self.set(k, j, self.get(k, j) - self.get(i, j) * coefficient);
+                result.set(k, j, result.get(k, j) - result.get(i, j) * coefficient);
+            }
+        }
+    }
+
+    return result;
+};
+
 Matrix.createVector = function (data) {
     let result = new Matrix(data.length, 1);
     data.forEach((e, i) => result.set(i, 0, e));
+    return result;
+};
+
+Matrix.createIdentity = function (n) {
+    let result = new Matrix(n, n);
+    for (let i = 0; i < n; ++i)
+        result.set(i, i, 1);
     return result;
 };
 

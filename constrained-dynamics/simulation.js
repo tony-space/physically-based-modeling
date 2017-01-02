@@ -87,9 +87,10 @@ var Simulation = class {
     }
 
     computeForces() {
+        const kd = -0.5;
+        const gravity = Matrix.createVector([0, 9.8]);
         this._particles.forEach(p => {
-            p.force.setValue(0, 0, 0);
-            p.force.setValue(1, 0, 9.8 * p.mass);
+            p.force = gravity.add(p.velocity.mult(kd));
         })
     }
 
@@ -152,6 +153,7 @@ var Simulation = class {
         let v = this.v;
         let Q = this.Q;
 
+        let c = Matrix.createVector(this._constrants.map(c => c.compute(q)));
         let j = this.jacobian(q);
         let cv = j.mult(v);
         let jv = this.jacobianDerivative(q, v);
@@ -166,7 +168,7 @@ var Simulation = class {
         let jvv = jv.mult(v).mult(-1);
         let jwq = jw.mult(Q);
 
-        let lambda = jwjt.inverse().mult(jvv.sub(jwq).sub(cv.mult(this.ks)).sub(cv.mult(this.kd)));
+        let lambda = jwjt.inverse().mult(jvv.sub(jwq).sub(c.mult(this.ks)).sub(cv.mult(this.kd)));
         let constraintForce = j.transpose().mult(lambda);
         this._particles.forEach((p, i) => {
             for (let k = 0; k < dimensions; ++k)

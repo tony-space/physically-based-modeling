@@ -85,6 +85,7 @@ class Stick extends Constraint {
         let p1 = this._simulation.getParticle(this._index1);
         let p2 = this._simulation.getParticle(this._index2);
 
+        if (!this._line) return;
         this._line.setAttribute('x1', p1.position.getValue(0, 0).toFixed(2));
         this._line.setAttribute('y1', p1.position.getValue(1, 0).toFixed(2));
 

@@ -1,6 +1,6 @@
 'use strict';
 
-class Matrix {
+var Matrix = class {
     constructor(rows, cols) {
         this._rows = rows;
         this._cols = cols;
@@ -155,5 +155,5 @@ class Matrix {
     }
 }
 
-if (typeof module !== 'undefiend')
+if (typeof module !== 'undefined')
     module.exports = Matrix;

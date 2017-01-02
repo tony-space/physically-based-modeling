@@ -3,7 +3,7 @@
 if (typeof require !== 'undefined')
     var Matrix = require('./matrix');
 
-class Constraint {
+var Constraint = class {
     constructor() {
         this._simulation = null;
     }
@@ -36,7 +36,8 @@ class Nail extends Constraint {
 
         let particle = sim.getParticle(this._index);
 
-        this._restPosition = particle.position.clone();
+        //this._restPosition = particle.position.clone();
+        this._distance = particle.position.dot(particle.position);
     }
 
     compute(q) {
@@ -46,8 +47,9 @@ class Nail extends Constraint {
         for (let i = 0; i < dimensions; ++i)
             position[i] = q.getValue(this._index * dimensions + i, 0);
 
-        let delta = Matrix.createVector(position).sub(this._restPosition);
-        return delta.dot(delta);
+        position = Matrix.createVector(position);
+        let distance = position.dot(position);
+        return distance - this._distance;
     }
 }
 

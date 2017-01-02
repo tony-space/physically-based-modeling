@@ -86,12 +86,30 @@ var Simulation = class {
         return this._particles[index];
     }
 
+    computeForces() {
+        this._particles.forEach(p => {
+            p.force.setValue(0, 0, 0);
+            p.force.setValue(1, 0, 9.8 * p.mass);
+        })
+    }
+
+    get Q() {
+        let result = new Array(this._particles.length * this.dimensions);
+
+        this._particles.forEach((p, i) => {
+            for (let k = 0; k < this.dimensions; ++k)
+                result[i * this.dimensions + k] = p.force.getValue(k, 0);
+        })
+
+        return Matrix.createVector(result);
+    }
+
     get q() {
         let result = new Array(this._particles.length * this.dimensions);
 
         this._particles.forEach((p, i) => {
-            result[i * this.dimensions] = p.x;
-            result[i * this.dimensions + 1] = p.y;
+            for (let k = 0; k < this.dimensions; ++k)
+                result[i * this.dimensions + k] = p.position.getValue(k, 0);
         })
 
         return Matrix.createVector(result);
@@ -105,14 +123,16 @@ var Simulation = class {
 
             p.updateVisual();
         });
+
+        this._constrants.forEach(c => c.updateVisual());
     }
 
     get v() {
         let result = new Array(this._particles.length * this.dimensions);
 
         this._particles.forEach((p, i) => {
-            result[i * this.dimensions] = p.vx;
-            result[i * this.dimensions + 1] = p.vy;
+            for (let k = 0; k < this.dimensions; ++k)
+                result[i * this.dimensions + k] = p.velocity.getValue(k, 0);
         })
 
         return Matrix.createVector(result);
@@ -130,6 +150,8 @@ var Simulation = class {
         const dimensions = this.dimensions;
         let q = this.q;
         let v = this.v;
+        let Q = this.Q;
+
         let j = this.jacobian(q);
         let cv = j.mult(v);
         let jv = this.jacobianDerivative(q, v);
@@ -142,13 +164,20 @@ var Simulation = class {
 
         let jwjt = jw.mult(j.transpose());
         let jvv = jv.mult(v).mult(-1);
-        let lambda = jwjt.inverse().mult(jvv.sub(cv.mult(this.ks).add(cv.mult(this.kd))));
-        let force = j.transpose().mult(lambda);
-        let a = force.clone();
+        let jwq = jw.mult(Q);
+
+        let lambda = jwjt.inverse().mult(jvv.sub(jwq).sub(cv.mult(this.ks)).sub(cv.mult(this.kd)));
+        let constraintForce = j.transpose().mult(lambda);
+        this._particles.forEach((p, i) => {
+            for (let k = 0; k < dimensions; ++k)
+                p.force.setValue(k, 0, p.force.getValue(k, 0) + constraintForce.getValue(i * dimensions + k, 0));
+        });
+
+        let a = constraintForce.clone();
         this._particles.forEach((p, i) => {
             for (let j = 0; j < dimensions; ++j)
-                a.setValue(i * dimensions + j, 0, force.getValue(i * dimensions + j, 0) / p.mass);
-        })
+                a.setValue(i * dimensions + j, 0, p.force.getValue(j, 0) / p.mass);
+        });
         return a;
     }
 
@@ -162,6 +191,10 @@ var Simulation = class {
 
     validate() {
         let c = Matrix.createVector(this._constrants.map(c => c.value));
+    }
+
+    step(dt) {
+        //runge-kutta
     }
 }
 

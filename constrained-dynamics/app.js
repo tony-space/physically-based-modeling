@@ -10,34 +10,50 @@ if (typeof require !== 'undefined') {
 let simulation = new Simulation();
 
 simulation.addParticle(new Particle({
-    mass: 2,
+    mass: 1,
+    position: Matrix.createVector([0, 0]),
+    velocity: Matrix.createVector([0, 0])
+}));
+
+simulation.addParticle(new Particle({
+    mass: 1,
     position: Matrix.createVector([1, 0]),
     velocity: Matrix.createVector([0, 0])
 }));
 
 simulation.addParticle(new Particle({
-    mass: 3,
-    position: Matrix.createVector([5, 0]),
+    mass: 1,
+    position: Matrix.createVector([2, 0]),
     velocity: Matrix.createVector([0, 0])
 }));
 
 simulation.addParticle(new Particle({
-    mass: 5,
-    position: Matrix.createVector([7, 0]),
-    velocity: Matrix.createVector([0, -5])
+    mass: 1,
+    position: Matrix.createVector([3, 0]),
+    velocity: Matrix.createVector([0, 0])
 }));
 
-simulation.addConstraint(Constraint.Nail(0));
+simulation.addConstraint(Constraint.Nail(0, Matrix.createVector([-1, -1])));
+simulation.addConstraint(Constraint.Nail(0, Matrix.createVector([1, -1])));
+
 simulation.addConstraint(Constraint.Stick(0, 1));
 simulation.addConstraint(Constraint.Stick(1, 2));
+simulation.addConstraint(Constraint.Stick(2, 3));
 
-setInterval(function () {
+let lastTime = Date.now();
+
+setInterval(function () {    
     let q = simulation.q;
     let v = simulation.v;
+    simulation.computeForces();    
     let a = simulation.a;
+    
+    let curTime = Date.now();
+    let dt = Math.min((curTime - lastTime) / 1000.0, 0.001);
+    lastTime = curTime;
 
-    q = q.add(v.mult(0.005));
-    v = v.add(a.mult(0.005));
+    q = q.add(v.mult(dt));
+    v = v.add(a.mult(dt));
     simulation.q = q;
     simulation.v = v;
-}, 10);
+}, 0);

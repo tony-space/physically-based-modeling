@@ -12,23 +12,24 @@ var Constraint = class {
         this._simulation = sim;
     }
 
-    static Nail(particle) {
-        return new Nail(particle);
+    updateVisual() {
+
+    }
+
+    static Nail(particle, staticPoint) {
+        return new Nail(particle, staticPoint);
     }
 
     static Stick(particle1, particle2) {
         return new Stick(particle1, particle2);
     }
-
-    compute() {
-        throw new Error('abstract method invocation');
-    }
 }
 
 class Nail extends Constraint {
-    constructor(index) {
+    constructor(index, staticPoint) {
         super();
         this._index = 0;
+        this._staticPoint = staticPoint;
     }
 
     setSimulation(sim) {
@@ -36,8 +37,8 @@ class Nail extends Constraint {
 
         let particle = sim.getParticle(this._index);
 
-        //this._restPosition = particle.position.clone();
-        this._distance = particle.position.dot(particle.position);
+        let delta = particle.position.sub(this._staticPoint);
+        this._distanceSquared = delta.dot(delta);
     }
 
     compute(q) {
@@ -48,8 +49,8 @@ class Nail extends Constraint {
             position[i] = q.getValue(this._index * dimensions + i, 0);
 
         position = Matrix.createVector(position);
-        let distance = position.dot(position);
-        return distance - this._distance;
+        let delta = position.sub(this._staticPoint);
+        return delta.dot(delta) - this._distanceSquared;
     }
 }
 
@@ -68,15 +69,36 @@ class Stick extends Constraint {
 
         let delta = particle1.position.sub(particle2.position);
         this._distanceSquared = delta.dot(delta);
+
+        if (typeof document === 'undefined')
+            return;
+
+        const svgns = 'http://www.w3.org/2000/svg';
+        this._line = document.createElementNS(svgns, 'line');
+        this._line.setAttribute('stroke', 'red');
+        this._line.setAttribute('stroke-width', '0.05');
+        this.updateVisual();
+        document.getElementById('plot').appendChild(this._line);
+    }
+
+    updateVisual() {
+        let p1 = this._simulation.getParticle(this._index1);
+        let p2 = this._simulation.getParticle(this._index2);
+
+        this._line.setAttribute('x1', p1.position.getValue(0, 0).toFixed(2));
+        this._line.setAttribute('y1', p1.position.getValue(1, 0).toFixed(2));
+
+        this._line.setAttribute('x2', p2.position.getValue(0, 0).toFixed(2));
+        this._line.setAttribute('y2', p2.position.getValue(1, 0).toFixed(2));
     }
 
     compute(q) {
         const dimensions = this._simulation.dimensions;
-        
+
         let pos1 = new Array(dimensions);
         let pos2 = new Array(dimensions);
-        
-        for(let i = 0; i < dimensions; ++i){
+
+        for (let i = 0; i < dimensions; ++i) {
             pos1[i] = q.getValue(this._index1 * dimensions + i, 0);
             pos2[i] = q.getValue(this._index2 * dimensions + i, 0);
         }
@@ -84,6 +106,7 @@ class Stick extends Constraint {
         let delta = Matrix.createVector(pos1).sub(Matrix.createVector(pos2));
         return delta.dot(delta) - this._distanceSquared;
     }
+
 }
 
 if (typeof module !== 'undefined')

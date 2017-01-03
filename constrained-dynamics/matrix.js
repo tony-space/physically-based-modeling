@@ -78,7 +78,7 @@ var Matrix = class {
 
             for (let i = 0; i < this.rows; ++i)
                 for (let j = 0; j < tensor.columns; ++j) {
-                    let sum = 0;
+                    var sum = 0;
                     for (let k = 0; k < this.columns; ++k)
                         sum += this.getValue(i, k) * tensor.getValue(k, j);
 
@@ -120,7 +120,7 @@ var Matrix = class {
 
             for (let k = 0; k < self.rows; ++k) {
                 if (k === i) continue;
-                let coefficient = self.getValue(k, i);
+                var coefficient = self.getValue(k, i);
                 for (let j = 0; j < self.columns; ++j) {
                     self.setValue(k, j, self.getValue(k, j) - self.getValue(i, j) * coefficient);
                     result.setValue(k, j, result.getValue(k, j) - result.getValue(i, j) * coefficient);
@@ -135,7 +135,7 @@ var Matrix = class {
     dot(tensor) {
         if (!(this.columns === 1 && tensor.columns === 1 && this.rows === tensor.rows))
             throw TypeError('invalid tensor types');
-        let sum = 0;
+        var sum = 0;
         for (let i = 0; i < this.rows; ++i)
             sum += this.getValue(i, 0) * tensor.getValue(i, 0);
         return sum;

@@ -49,6 +49,9 @@ function derivative(func, arg, epsilon) {
         throw new TypeError("not implemented yet");
 }
 
+const kd = -0.25;
+const gravity = Matrix.createVector([0, 9.8]);
+
 var Simulation = class {
     constructor() {
         this._particles = [];
@@ -87,29 +90,27 @@ var Simulation = class {
     }
 
     computeForces() {
-        const kd = -0.25;
-        const gravity = Matrix.createVector([0, 9.8]);
         this._particles.forEach(p => {
             p.force = gravity.add(p.velocity.mult(kd));
         });
     }
 
     get state() {
-        let result = new Array(this._particles.length * this.dimensions * 2);
+        let result = new Matrix(this._particles.length * this.dimensions * 2, 1);
 
         this._particles.forEach((p, i) => {
             for (let k = 0; k < this.dimensions; ++k)
-                result[i * this.dimensions + k] = p.position.getValue(k, 0);
+                result.setValue(i * this.dimensions + k, 0, p.position.getValue(k, 0));
         });
 
         let velocityOffset = this.dimensions * this._particles.length;
 
         this._particles.forEach((p, i) => {
             for (let k = 0; k < this.dimensions; ++k)
-                result[velocityOffset + i * this.dimensions + k] = p.velocity.getValue(k, 0);
+                result.setValue(velocityOffset + i * this.dimensions + k, 0, p.velocity.getValue(k, 0));
         });
 
-        return Matrix.createVector(result);
+        return result;
     }
 
     set state(newState) {
@@ -130,11 +131,11 @@ var Simulation = class {
     }
 
     get stateDerivative() {
-        let result = new Array(this._particles.length * this.dimensions * 2);
+        let result = new Matrix(this._particles.length * this.dimensions * 2, 1);
 
         this._particles.forEach((p, i) => {
             for (let k = 0; k < this.dimensions; ++k)
-                result[i * this.dimensions + k] = p.velocity.getValue(k, 0);
+                result.setValue(i * this.dimensions + k, 0, p.velocity.getValue(k, 0));
         });
 
         this.computeForces();
@@ -144,43 +145,49 @@ var Simulation = class {
 
         this._particles.forEach((p, i) => {
             for (let k = 0; k < this.dimensions; ++k)
-                result[accelOffst + i * this.dimensions + k] = a.getValue(i * this.dimensions + k, 0);
+                result.setValue(accelOffst + i * this.dimensions + k, 0, a.getValue(i * this.dimensions + k, 0));
         });
 
-        return Matrix.createVector(result);
+        return result;
     }
 
     get Q() {
-        let result = new Array(this._particles.length * this.dimensions);
+        let result = new Matrix(this._particles.length * this.dimensions, 1);
 
         this._particles.forEach((p, i) => {
             for (let k = 0; k < this.dimensions; ++k)
-                result[i * this.dimensions + k] = p.force.getValue(k, 0);
+                result.setValue(i * this.dimensions + k, 0, p.force.getValue(k, 0));
         });
 
-        return Matrix.createVector(result);
+        return result;
     }
 
     get q() {
-        let result = new Array(this._particles.length * this.dimensions);
+        let result = new Matrix(this._particles.length * this.dimensions, 1);
 
         this._particles.forEach((p, i) => {
             for (let k = 0; k < this.dimensions; ++k)
-                result[i * this.dimensions + k] = p.position.getValue(k, 0);
+                result.setValue(i * this.dimensions + k, 0, p.position.getValue(k, 0));
         });
 
-        return Matrix.createVector(result);
+        return result;
     }
 
     get v() {
-        let result = new Array(this._particles.length * this.dimensions);
+        let result = new Matrix(this._particles.length * this.dimensions, 1);
 
         this._particles.forEach((p, i) => {
             for (let k = 0; k < this.dimensions; ++k)
-                result[i * this.dimensions + k] = p.velocity.getValue(k, 0);
+                result.setValue(i * this.dimensions + k, 0, p.velocity.getValue(k, 0));
         });
 
-        return Matrix.createVector(result);
+        return result;
+    }
+
+    C(q) {
+        let result = new Matrix(this._constrants.length, 1);
+        this._constrants.forEach((c, i) => result.setValue(i, 0, c.compute(q)));
+        return result;
     }
 
     get a() {
@@ -189,7 +196,8 @@ var Simulation = class {
         let v = this.v;
         let Q = this.Q;
 
-        let c = Matrix.createVector(this._constrants.map(c => c.compute(q)));
+        let c = this.C(q);
+
         let j = this.jacobian(q);
         let cv = j.mult(v);
         let jv = this.jacobianDerivative(q, v);
@@ -220,15 +228,11 @@ var Simulation = class {
     }
 
     jacobian(q) {
-        return derivative(q => Matrix.createVector(this._constrants.map(c => c.compute(q))), q, this.epsilon);
+        return derivative(q => this.C(q), q, this.epsilon);
     }
 
     jacobianDerivative(q, v) {
         return derivative(q => this.jacobian(q).mult(v), q, this.epsilon);
-    }
-
-    validate() {
-        let c = Matrix.createVector(this._constrants.map(c => c.value));
     }
 
     step(dt) {
@@ -236,17 +240,17 @@ var Simulation = class {
         let k0 = this.state;
 
         let k1 = this.stateDerivative;
-        
-        this.state = k1.mult(dt/2).add(k0);
+
+        this.state = k1.mult(dt / 2).add(k0);
         let k2 = this.stateDerivative;
-        
-        this.state = k2.mult(dt/2).add(k0);
+
+        this.state = k2.mult(dt / 2).add(k0);
         let k3 = this.stateDerivative;
 
         this.state = k3.mult(dt).add(k0);
         let k4 = this.stateDerivative;
 
-        this.state = k2.add(k3).mult(2).add(k1).add(k4).mult(dt/6).add(k0);
+        this.state = k2.add(k3).mult(2).add(k1).add(k4).mult(dt / 6).add(k0);
     }
 }
 

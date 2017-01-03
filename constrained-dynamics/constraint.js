@@ -44,13 +44,12 @@ class Nail extends Constraint {
     compute(q) {
         const dimensions = this._simulation.dimensions;
 
-        let position = new Array(dimensions);
-        for (let i = 0; i < dimensions; ++i)
-            position[i] = q.getValue(this._index * dimensions + i, 0);
-
-        position = Matrix.createVector(position);
-        let delta = position.sub(this._staticPoint);
-        return delta.dot(delta) - this._distanceSquared;
+        var dot = 0;
+        for (let i = 0; i < dimensions; ++i) {
+            let d = q.getValue(this._index * dimensions + i, 0) - this._staticPoint.getValue(i, 0);
+            dot += d * d;
+        }
+        return dot - this._distanceSquared;
     }
 }
 
@@ -96,16 +95,13 @@ class Stick extends Constraint {
     compute(q) {
         const dimensions = this._simulation.dimensions;
 
-        let pos1 = new Array(dimensions);
-        let pos2 = new Array(dimensions);
-
+        var dot = 0;
         for (let i = 0; i < dimensions; ++i) {
-            pos1[i] = q.getValue(this._index1 * dimensions + i, 0);
-            pos2[i] = q.getValue(this._index2 * dimensions + i, 0);
+            let delta = q.getValue(this._index1 * dimensions + i, 0) - q.getValue(this._index2 * dimensions + i, 0);
+            dot += delta * delta;
         }
 
-        let delta = Matrix.createVector(pos1).sub(Matrix.createVector(pos2));
-        return delta.dot(delta) - this._distanceSquared;
+        return dot - this._distanceSquared;
     }
 
 }

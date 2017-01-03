@@ -77,25 +77,15 @@ simulation.addConstraint(Constraint.Stick(5, 7));
 simulation.addConstraint(Constraint.Stick(6, 7));
 
 let lastTime = Date.now();
-
 let timer = setInterval(function () {
+    let curTime = Date.now();
+    let dt = (curTime - lastTime) / 1000;
     try {
-        let q = simulation.q;
-        let v = simulation.v;
-        simulation.computeForces();
-        let a = simulation.a;
-
-        let curTime = Date.now();
-        let dt = Math.min((curTime - lastTime) / 1000.0, 0.005);
+        simulation.step(Math.min(dt, 0.1));
         lastTime = curTime;
-
-        q = q.add(v.mult(dt));
-        v = v.add(a.mult(dt));
-        simulation.q = q;
-        simulation.v = v;
     }
     catch(ex){
-        console.log(ex.message);
+        console.log(ex.message, dt);
         clearInterval(timer);
     }
 }, 0);
